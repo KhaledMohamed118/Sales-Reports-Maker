@@ -1,11 +1,7 @@
+import tkinter as tkr
 import pandas as pd
 import numpy as np
 from copy import deepcopy
-
-Database_Name = "Book.xlsx"
-
-data = pd.read_excel(Database_Name)
-Database_Size = len(data)
 
 
 def save_database():
@@ -26,7 +22,8 @@ def search(name, cpr, phpr):
     sz = 0
     df = DataFrame(columns=(i for i in data))
     for i in range(Database_Size):
-        if (name in data["Name"][i]) and (cpr == 0 or cpr == data["CPrice"][i]) and (phpr == 0 or phpr == data["PhPrice"][i]):
+        t = data.loc[i]
+        if ((not name) or (name in t["Name"])) and ((not cpr) or (cpr == t["CPrice"])) and ((not phpr) or (phpr == t["PhPrice"])):
             df.loc[sz] = data.loc[i]
             sz += 1
     return df
@@ -61,4 +58,47 @@ def update_produce(idx, name, cpr, phpr):
     save_database()
 
 
-print(data)
+def temp(event):
+    print('abc')
+
+
+def main(db_name):
+    global data, root, Database_Size, Database_Name
+    Database_Name = db_name
+    data = pd.read_excel(Database_Name)
+    Database_Size = len(data)
+
+    root = tkr.Tk()
+    showall_button = tkr.Button(root, text='عرض كل الأصناف')
+    edit_button = tkr.Button(root, text='تعديل صنف')
+    report_button = tkr.Button(root, text='بدء فاتورة')
+
+    showall_button.bind("<Button-1>", temp)
+    edit_button.bind("<Button-1>", temp)
+    report_button.bind("<Button-1>", temp)
+
+    showall_button.pack(side=tkr.LEFT)
+    edit_button.pack(side=tkr.LEFT)
+    report_button.pack(side=tkr.LEFT)
+    root.mainloop()
+
+main("Book.xlsx")
+
+"""
+frame1 = tkr.Frame(root)
+frame1.pack()
+frame2 = tkr.Frame(root)
+frame2.pack(side=tkr.BOTTOM)
+# frame2.pack()
+
+button1 = tkr.Button(frame1, text='Button1', fg='red')
+button2 = tkr.Button(frame1, text='Button2', fg='green')
+button3 = tkr.Button(frame1, text='Button3', fg='blue')
+button4 = tkr.Button(frame2, text='Button4', fg='orange')
+
+button1.pack(side=tkr.LEFT)
+button4.pack(side=tkr.LEFT)
+button2.pack(side=tkr.LEFT)
+button3.pack(side=tkr.LEFT)
+
+"""
