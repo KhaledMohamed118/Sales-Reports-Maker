@@ -18,12 +18,12 @@ def main():
     showall_button = tkr.Button(root, text='عرض كل الأصناف', font=('Arial', '20'))
     add_button = tkr.Button(root, text='إضافة صنف', font=('Arial', '20'))
     edit_button = tkr.Button(root, text='تعديل صنف', font=('Arial', '20'))
-    report_button = tkr.Button(root, text='بدء فاتورة', font=('Arial', '20'))
+    report_button = tkr.Button(root, text='بدء فاتورة', font=('Arial', '20'), command=lambda m='par': temp(m))
 
     showall_button.bind("<Button-1>", showall)
     add_button.bind("<Button-1>", addone)
     edit_button.bind("<Button-1>", editone)
-    report_button.bind("<Button-1>", temp)
+    # report_button.bind("<Button-1>", temp)
 
     showall_button.pack(side=tkr.LEFT)
     add_button.pack(side=tkr.LEFT)
@@ -71,6 +71,35 @@ def notnumber(stri):
         return True
     else:
         return False
+
+
+def search(name, cpr, phpr):
+    if notnumber(cpr):
+        cpr = 0
+    else:
+        cpr = '0' + cpr
+        if '.' in cpr:
+            cpr += '0'
+        cpr = float(cpr)
+
+    if notnumber(phpr):
+        phpr = 0
+    else:
+        phpr = '0' + phpr
+        if '.' in phpr:
+            phpr += '0'
+        phpr = float(phpr)
+
+    sz = 0
+    df = pd.DataFrame(columns=['Name', 'CPrice', 'PhPrice'])
+
+    for i in range(Database_Size):
+        t = data.loc[i]
+        if (name.lower() in t["Name"].lower()) and ((not cpr) or (cpr == float(t["CPrice"]))) and ((not phpr) or (phpr == float(t["PhPrice"]))):
+            df.loc[sz] = data.loc[i]
+            sz += 1
+
+    return df
 
 
 def showall(event):
@@ -142,7 +171,13 @@ def add_button_pressed():
         elif notnumber(phpr_entry_add.get()):
             tkrmsg.showerror('خطأ', 'خطأ فى سعر الصيدلي')
         else:
-            add_product(name_entry_add.get(), float('0' + cpr_entry_add.get() + '0'), float('0' + phpr_entry_add.get() + '0'))
+            tt1 = '0' + cpr_entry_add.get()
+            tt2 = '0' + phpr_entry_add.get()
+            if '.' in tt1:
+                tt1 += '0'
+            if '.' in tt2:
+                tt2 += '0'
+            add_product(name_entry_add.get(), float(tt1), float(tt2))
             tkrmsg.showinfo('تم', 'تم اضافة الصنف بنجاح')
 
 
@@ -154,60 +189,67 @@ def add_product(name, cpr, phpr):
 
 
 def editone(event):
+    global downframe_edit
     root.destroy()
     editone_window = tkr.Tk()
+
+    topframe = tkr.Frame(editone_window)
+    downframe_edit = tkr.Frame(editone_window)
+
+    topframe.pack()
+    downframe_edit.pack()
 
     cur_name = tkr.StringVar()
     cur_cpr = tkr.StringVar()
     cur_phpr = tkr.StringVar()
 
-    cur_name.trace("w", lambda name, index, mode: search(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
-    cur_cpr.trace("w", lambda name, index, mode: search(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
-    cur_phpr.trace("w", lambda name, index, mode: search(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
+    cur_name.trace("w", lambda name, index, mode: update_edit(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
+    cur_cpr.trace("w", lambda name, index, mode: update_edit(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
+    cur_phpr.trace("w", lambda name, index, mode: update_edit(cur_name.get(), cur_cpr.get(), cur_phpr.get()))
 
-    cpr_label = tkr.Label(editone_window, text='  سعر المستهلك  ', font=('Arial', '15'))
-    name_label = tkr.Label(editone_window, text='  أسم الصنف  ', font=('Arial', '15'))
-    phpr_label = tkr.Label(editone_window, text='  سعر الصيدلي ', font=('Arial', '15'))
+    cpr_label = tkr.Label(topframe, text='  سعر المستهلك  ', font=('Arial', '15'))
+    name_label = tkr.Label(topframe, text='  أسم الصنف  ', font=('Arial', '15'))
+    phpr_label = tkr.Label(topframe, text='  سعر الصيدلي ', font=('Arial', '15'))
 
     phpr_label.grid(row=0, column=0)
     name_label.grid(row=0, column=1)
     cpr_label.grid(row=0, column=2)
 
-    cpr_entry_edit = tkr.Entry(editone_window, font=('Arial', '20'), width=5, textvariable=cur_cpr)
-    name_entry_edit = tkr.Entry(editone_window, font=('Arial', '20'), width=15, textvariable=cur_name)
-    phpr_entry_edit = tkr.Entry(editone_window, font=('Arial', '20'), width=5, textvariable=cur_phpr)
+    cpr_entry_edit = tkr.Entry(topframe, font=('Arial', '20'), width=5, textvariable=cur_cpr)
+    name_entry_edit = tkr.Entry(topframe, font=('Arial', '20'), width=45, textvariable=cur_name)
+    phpr_entry_edit = tkr.Entry(topframe, font=('Arial', '20'), width=5, textvariable=cur_phpr)
 
     phpr_entry_edit.grid(row=1, column=0)
     name_entry_edit.grid(row=1, column=1)
     cpr_entry_edit.grid(row=1, column=2)
-
+    update_edit('', '', '')
     editone_window.mainloop()
     main()
 
 
-def search(name, cpr, phpr):
-    if notnumber(cpr):
-        cpr = 0
-    else:
-        cpr = float('0' + cpr + '0')
+def update_edit(name, cpr, phpr):
+    for i in downframe_edit.winfo_children():
+        i.destroy()
+    df = search(name, cpr, phpr)
+    for i in range(len(df)):
+        cpr_label = tkr.Label(downframe_edit, text=("%.2f" % df['CPrice'][i]), font=('Arial', '15'), width=5)
+        name_label = tkr.Label(downframe_edit, text=df['Name'][i], font=('Arial', '15'), width = 65)
+        phpr_label = tkr.Label(downframe_edit, text=("%.2f" % df['PhPrice'][i]), font=('Arial', '15'), width=5)
 
-    if notnumber(phpr):
-        phpr = 0
-    else:
-        phpr = float('0' + phpr + '0')
+        edit_button = tkr.Button(downframe_edit, text='تعديل', font=('Arial', '20'), command=lambda m=df['Name'][i]: edit_product(m), width=3)
+        remove_button = tkr.Button(downframe_edit, text='حذف', font=('Arial', '20'), command=lambda m=df['Name'][i]: delete_product(m), width=3)
 
-    sz = 0
-    df = pd.DataFrame(columns=['Name', 'CPrice', 'PhPrice'])
-
-    for i in range(Database_Size):
-        t = data.loc[i]
-        if (name.lower() in t["Name"].lower()) and ((not cpr) or (cpr == float(t["CPrice"]))) and ((not phpr) or (phpr == float(t["PhPrice"]))):
-            df.loc[sz] = data.loc[i]
-            sz += 1
-    print(df)
+        phpr_label.grid(row=i, column=0)
+        name_label.grid(row=i, column=1)
+        cpr_label.grid(row=i, column=2)
+        edit_button.grid(row=i, column=3)
+        remove_button.grid(row=i, column=4)
 
 
 def delete_product(name):
+    answer = tkrmsg.askquestion("تأكيد", "حذف " + name + '\n هل انت متأكد ؟')
+    if answer == 'no':
+        return
     global Database_Size
     found = get_index(name)
 
@@ -216,17 +258,73 @@ def delete_product(name):
     Database_Size -= 1
     data.drop(data.index[Database_Size], inplace=True)
     save_database()
+    update_edit('', '', '')
 
 
-def update_produce(idx, name, cpr, phpr):
-    data.loc[idx]["Name"] = name
-    data.loc[idx]["CPrice"] = cpr
-    data.loc[idx]["PhPrice"] = phpr
-    save_database()
+def edit_product(name):
+    global cpr_entry_edit, name_entry_edit, phpr_entry_edit, edit_window
+
+    found = get_index(name)
+
+    edit_window = tkr.Tk()
+
+    cpr_label_edit = tkr.Label(edit_window, text='سعر المستهلك', font=('Arial', '15'))
+    name_label_edit = tkr.Label(edit_window, text='أسم الصنف', font=('Arial', '15'))
+    phpr_label_edit = tkr.Label(edit_window, text='سعر الصيدلي', font=('Arial', '15'))
+
+    cpr_entry_edit = tkr.Entry(edit_window, font=('Arial', '20'), width=5)
+    name_entry_edit = tkr.Entry(edit_window, font=('Arial', '20'), width=30)
+    phpr_entry_edit = tkr.Entry(edit_window, font=('Arial', '20'), width=5)
+
+    cpr_entry_edit.insert(0, data['CPrice'][found])
+    name_entry_edit.insert(0, data['Name'][found])
+    phpr_entry_edit.insert(0, data['PhPrice'][found])
+
+    edit_button = tkr.Button(edit_window, text='تعديل', font=('Arial', '20'), width=10,  command=lambda m=found: editbuttponclicked(m))
+
+    phpr_label_edit.grid(row=0)
+    name_label_edit.grid(row=0, column=1)
+    cpr_label_edit.grid(row=0, column=2)
+
+    phpr_entry_edit.grid(row=1, column=0)
+    name_entry_edit.grid(row=1, column=1)
+    cpr_entry_edit.grid(row=1, column=2)
+
+    edit_button.grid(row=2, columnspan=3)
+
+    edit_window.mainloop()
 
 
-def temp(event):
-    print('abc')
+def editbuttponclicked(idx):
+    if not cpr_entry_edit.get() or not name_entry_edit.get() or not phpr_entry_edit.get():
+        tkrmsg.showerror('خطأ', 'لا يمكن ترك احد الخانات فارغة')
+
+    elif (get_index(name_entry_edit.get()) < Database_Size) and (get_index(name_entry_edit.get()) != idx):
+        tkrmsg.showerror('خطأ', 'هذا الأسم موجود من قبل')
+
+    else:
+        if notnumber(cpr_entry_edit.get()):
+            tkrmsg.showerror('خطأ', 'خطأ فى سعر المستهلك')
+        elif notnumber(phpr_entry_edit.get()):
+            tkrmsg.showerror('خطأ', 'خطأ فى سعر الصيدلي')
+        else:
+            tt1 = '0' + cpr_entry_edit.get()
+            tt2 = '0' + phpr_entry_edit.get()
+            if '.' in tt1:
+                tt1 += '0'
+            if '.' in tt2:
+                tt2 += '0'
+
+            data['Name'][idx] = name_entry_edit.get()
+            data['CPrice'][idx] = float(tt1)
+            data['PhPrice'][idx] = float(tt2)
+            tkrmsg.showinfo('تم', 'تم التعديل')
+            save_database()
+            edit_window.destroy()
+            update_edit('', '', '')
+
+def temp(par):
+    print('x')
 
 
 def temp2():
