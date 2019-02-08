@@ -8,11 +8,10 @@ from datetime import date
 
 def main():
     global data, root, Database_Size, Database_Name
-    Database_Name = "Book.xlsx"
+    Database_Name = "Book2.xlsx"
     data = pd.read_excel(Database_Name)
     Database_Size = len(data)
     save_database()
-
     root = tkr.Tk()
     root.title('Mr/Abd Elrahman')
 
@@ -35,19 +34,22 @@ def main():
 
 
 def canvasfunc(event):
-    canvas_rightframe_fatora.configure(scrollregion=canvas_rightframe_fatora.bbox("all"), width=500, height=500)
+    canvas_rightframe_fatora.configure(scrollregion=canvas_rightframe_fatora.bbox("all"), width=525, height=500)
+
+
+def canvasfunc2(event):
+    canvas_downframe_fatora.configure(scrollregion=canvas_downframe_fatora.bbox("all"), width=700, height=500)
+
+
+def showall_canvas_func(event):
+    canvas_showall.configure(scrollregion=canvas_showall.bbox("all"), width=700, height=500)
+
+
+def editone_canvas_func(event):
+    canvas_editone.configure(scrollregion=canvas_editone.bbox("all"), width=800, height=500)
 
 
 def save_database():
-    for i in range(Database_Size):
-        mi = i
-        for j in range(i+1, Database_Size):
-            if data['Name'][j] < data['Name'][mi]:
-                mi = j
-        x = deepcopy(data.loc[mi])
-        y = deepcopy(data.loc[i])
-        data.loc[mi] = deepcopy(y)
-        data.loc[i] = deepcopy(x)
     writer = pd.ExcelWriter(Database_Name, engine='xlsxwriter')
     data.to_excel(writer, sheet_name='Sheet1')
     writer.save()
@@ -108,26 +110,37 @@ def search(name, cpr, phpr):
 
 
 def showall(event):
+    global canvas_showall
     root.destroy()
     showall_window = tkr.Tk()
 
-    cpr_label = tkr.Label(showall_window, text='  سعر المستهلك  ', font=('Arial', '25'))
-    name_label = tkr.Label(showall_window, text='  أسم الصنف  ', font=('Arial', '25'))
-    phpr_label = tkr.Label(showall_window, text='  سعر الصيدلي ', font=('Arial', '25'))
+    canvas_showall = tkr.Canvas(showall_window)
+    in_canvas_showall = tkr.Frame(canvas_showall)
+
+    myscrollbar = tkr.Scrollbar(showall_window, orient="vertical", command=canvas_showall.yview)
+    canvas_showall.configure(yscrollcommand=myscrollbar.set)
+    myscrollbar.pack(side="right", fill="y")
+    canvas_showall.pack(side="left")
+    canvas_showall.create_window((0, 0), window=in_canvas_showall, anchor='nw')
+    in_canvas_showall.bind("<Configure>", showall_canvas_func)
+
+    cpr_label = tkr.Label(in_canvas_showall, text='  سعر المستهلك  ', font=('Arial', '25'))
+    name_label = tkr.Label(in_canvas_showall, text='  أسم الصنف  ', font=('Arial', '25'))
+    phpr_label = tkr.Label(in_canvas_showall, text='  سعر الصيدلي ', font=('Arial', '25'))
 
     phpr_label.grid(row=0, column=0)
     name_label.grid(row=0, column=1)
     cpr_label.grid(row=0, column=2)
 
     for i in range(Database_Size):
-        cpr_label = tkr.Label(showall_window, text=("%.2f" % data['CPrice'][i]), font=('Arial', '15'))
-        name_label = tkr.Label(showall_window, text=data['Name'][i], font=('Arial', '15'))
-        phpr_label = tkr.Label(showall_window, text=("%.2f" % data['PhPrice'][i]), font=('Arial', '15'))
+        cpr_label = tkr.Label(in_canvas_showall, text=("%.2f" % data['CPrice'][i]), font=('Arial', '15'))
+        name_label = tkr.Label(in_canvas_showall, text=data['Name'][i], font=('Arial', '15'))
+        phpr_label = tkr.Label(in_canvas_showall, text=("%.2f" % data['PhPrice'][i]), font=('Arial', '15'))
 
         phpr_label.grid(row=i+1, column=0)
         name_label.grid(row=i+1, column=1)
         cpr_label.grid(row=i+1, column=2)
-
+    print('x')
     showall_window.mainloop()
     main()
 
@@ -194,15 +207,22 @@ def add_product(name, cpr, phpr):
 
 
 def editone(event):
-    global downframe_edit
+    global in_canvas_editone, canvas_editone
     root.destroy()
     editone_window = tkr.Tk()
 
     topframe = tkr.Frame(editone_window)
-    downframe_edit = tkr.Frame(editone_window)
-
     topframe.pack()
-    downframe_edit.pack()
+
+    canvas_editone = tkr.Canvas(editone_window)
+    in_canvas_editone = tkr.Frame(canvas_editone)
+
+    myscrollbar = tkr.Scrollbar(editone_window, orient="vertical", command=canvas_editone.yview)
+    canvas_editone.configure(yscrollcommand=myscrollbar.set)
+    myscrollbar.pack(side="right", fill="y")
+    canvas_editone.pack(side="left")
+    canvas_editone.create_window((0, 0), window=in_canvas_editone, anchor='nw')
+    in_canvas_editone.bind("<Configure>", editone_canvas_func)
 
     cur_name = tkr.StringVar()
     cur_cpr = tkr.StringVar()
@@ -234,12 +254,13 @@ def editone(event):
 
 def update_edit(name, cpr, phpr, whocalled):
     if whocalled:
-        fr = downframe_fatora
+        fr = in_canvas_downframe_fatora
     else:
-        fr = downframe_edit
+        fr = in_canvas_editone
 
-    for i in fr.winfo_children():
-        i.destroy()
+    for thing in fr.grid_slaves():
+        thing.grid_forget()
+
     df = search(name, cpr, phpr)
     for i in range(len(df)):
         cpr_label = tkr.Label(fr, text=("%.2f" % df['CPrice'][i]), font=('Arial', '15'), width=5)
@@ -356,8 +377,9 @@ def report(event):
 
 
 def start_buttpon_clicked():
-    global downframe_fatora, quantity_entry, total, in_canvas_rightframe_fatora, total_label, df_fat, sz_fat, canvas_rightframe_fatora
-    total = 0
+    global downframe_fatora, quantity_entry, in_canvas_rightframe_fatora, total_label,\
+        df_fat, sz_fat, canvas_rightframe_fatora, canvas_downframe_fatora, in_canvas_downframe_fatora
+
     sz_fat = 0
     df_fat = pd.DataFrame(columns=['index', 'Quantity'])
 
@@ -377,6 +399,16 @@ def start_buttpon_clicked():
     topframe_fatora.grid(row=0, column=0)
     rightframe_fatora.grid(row=0, column=1, rowspan=2)
     downframe_fatora.grid(row=1)
+
+    canvas_downframe_fatora = tkr.Canvas(downframe_fatora)
+    in_canvas_downframe_fatora = tkr.Frame(canvas_downframe_fatora)
+
+    myscrollbar = tkr.Scrollbar(downframe_fatora, orient="vertical", command=canvas_downframe_fatora.yview)
+    canvas_downframe_fatora.configure(yscrollcommand=myscrollbar.set)
+    myscrollbar.pack(side="right", fill="y")
+    canvas_downframe_fatora.pack(side="left")
+    canvas_downframe_fatora.create_window((0, 0), window=in_canvas_downframe_fatora, anchor='nw')
+    in_canvas_downframe_fatora.bind("<Configure>", canvasfunc2)
 
     canvas_rightframe_fatora = tkr.Canvas(rightframe_fatora)
     in_canvas_rightframe_fatora = tkr.Frame(canvas_rightframe_fatora)
@@ -418,11 +450,14 @@ def start_buttpon_clicked():
     cpr_entry_fatora.grid(row=1, column=2)
     quantity_entry.grid(row=1, column=3)
 
-    total_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % total), font=('Arial', '15'))
-    totalname_label = tkr.Label(in_canvas_rightframe_fatora, text='الإجمالى : ', font=('Arial', '15'))
+    total_label = tkr.Label(in_canvas_rightframe_fatora, text='0.00', font=('Arial', '15'))
+    totalname_label = tkr.Label(in_canvas_rightframe_fatora, text='الإجمالى  ', font=('Arial', '15'))
+    save_fatora_button = tkr.Button(in_canvas_rightframe_fatora, text='حفظ', font=('Arial', '20'), width=5,
+                                    command=save_pressed)
 
-    total_label.grid(row=0, column=0)
-    totalname_label.grid(row=0, column=1)
+    save_fatora_button.grid(row=0, column=0)
+    total_label.grid(row=0, column=1)
+    totalname_label.grid(row=0, column=2)
 
     name1_label = tkr.Label(in_canvas_rightframe_fatora, text='  أسم الصنف  ', font=('Arial', '15'))
     phpr1_label = tkr.Label(in_canvas_rightframe_fatora, text='  سعر القطعة  ', font=('Arial', '15'))
@@ -440,38 +475,81 @@ def start_buttpon_clicked():
 
 
 def addinfatora_pressed(name):
-    global sz_fat, total
+    global sz_fat
     quan = quantity_entry.get()
     if (notnumber(quan)) or ('.' in quan) or (not quan) or (not int(quan)):
         tkrmsg.showerror("خطأ", 'خطأ فى الكمية .. لم يتم اضافة الصنف إلى الفاتورة')
         return
 
+    total = 0
     quan = int(quan)
     found = get_index(name)
-    new_pr = float(data['PhPrice'][found])*quan
-    name2_label = tkr.Label(in_canvas_rightframe_fatora, text=name, font=('Arial', '15'), width='15')
-    phpr2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % data['PhPrice'][found]), font=('Arial', '15'))
-    quantity2_label = tkr.Label(in_canvas_rightframe_fatora, text=quan, font=('Arial', '15'))
-    phprtotal2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % new_pr), font=('Arial', '15'))
-
-    phprtotal2_label.grid(row=2+sz_fat, column=0)
-    phpr2_label.grid(row=2+sz_fat, column=1)
-    quantity2_label.grid(row=2+sz_fat, column=2)
-    name2_label.grid(row=2+sz_fat, column=3)
 
     df_fat.loc[sz_fat] = [found, quan]
     sz_fat += 1
-    total += new_pr
+
+    for i in range(sz_fat):
+        new_pr = float(data['PhPrice'][int(df_fat['index'][i])])
+        qua = int(df_fat['Quantity'][i])
+        add = new_pr*qua
+        name2_label = tkr.Label(in_canvas_rightframe_fatora, text=data['Name'][int(df_fat['index'][i])],
+                                font=('Arial', '15'), width='15')
+        phpr2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % new_pr), font=('Arial', '15'))
+        quantity2_label = tkr.Label(in_canvas_rightframe_fatora, text=df_fat['Quantity'][i], font=('Arial', '15'))
+        phprtotal2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % add), font=('Arial', '15'))
+        removefatora_button = tkr.Button(in_canvas_rightframe_fatora, text='حذف', font=('Arial', '20'),
+                                        command=lambda m=i: removefatora_pressed(m), width=3)
+        total += add
+
+        phprtotal2_label.grid(row=2+i, column=0)
+        phpr2_label.grid(row=2+i, column=1)
+        quantity2_label.grid(row=2+i, column=2)
+        name2_label.grid(row=2+i, column=3)
+        removefatora_button.grid(row=2+i, column=4)
+
     total_label['text'] = ("%.2f" % total)
 
 
-def temp(par):
-    today = date.today()
-    print(today)  # '2017-12-26'
+def removefatora_pressed(idx):
+    global sz_fat
+    answer = tkrmsg.askquestion("تأكيد", "حذف " + data['Name'][int(df_fat['index'][idx])] + '\n هل انت متأكد ؟')
+    if answer == 'no':
+        return
+
+    for i in range(idx+1, sz_fat):
+        df_fat.loc[i-1] = df_fat.loc[i]
+    sz_fat -= 1
+    df_fat.drop(df_fat.index[sz_fat], inplace=True)
+    total = 0
+
+    for thing in in_canvas_rightframe_fatora.grid_slaves():
+        if int(thing.grid_info()["row"]) > 1:
+            thing.grid_forget()
+
+    for i in range(sz_fat):
+        new_pr = float(data['PhPrice'][int(df_fat['index'][i])])
+        qua = int(df_fat['Quantity'][i])
+        add = new_pr*qua
+        name2_label = tkr.Label(in_canvas_rightframe_fatora, text=data['Name'][int(df_fat['index'][i])],
+                                font=('Arial', '15'), width='15')
+        phpr2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % new_pr), font=('Arial', '15'))
+        quantity2_label = tkr.Label(in_canvas_rightframe_fatora, text=df_fat['Quantity'][i], font=('Arial', '15'))
+        phprtotal2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % add), font=('Arial', '15'))
+        removefatora_button = tkr.Button(in_canvas_rightframe_fatora, text='حذف', font=('Arial', '20'),
+                                        command=lambda m=i: removefatora_pressed(m), width=3)
+        total += add
+
+        phprtotal2_label.grid(row=2+i, column=0)
+        phpr2_label.grid(row=2+i, column=1)
+        quantity2_label.grid(row=2+i, column=2)
+        name2_label.grid(row=2+i, column=3)
+        removefatora_button.grid(row=2+i, column=4)
+
+    total_label['text'] = ("%.2f" % total)
 
 
-def temp2():
-    print('def')
+def save_pressed():
+    print(date.today())
 
 
 main()
