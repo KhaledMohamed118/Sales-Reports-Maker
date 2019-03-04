@@ -1,2 +1,2 @@
-* linguist-vendored
-*.py linguist-vendored=false
+Files/* linguist-vendored
+*.tcl linguist-vendored=false
