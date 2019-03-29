@@ -465,9 +465,10 @@ def report(event):
 
 def start_buttpon_clicked():
     global downframe_fatora, quantity_entry, phpr_entry, in_canvas_rightframe_fatora, total_label, phname_entry_get,\
-        df_fat, sz_fat, canvas_rightframe_fatora, bupr_entry_add, name_entry_add, cpr_entry_add,\
-        canvas_downframe_fatora, in_canvas_downframe_fatora, count_label, fatora, rightframe_fatora, phars_Size
+        df_fat, sz_fat, canvas_rightframe_fatora, bupr_entry_add, name_entry_add, cpr_entry_add, fatora_total, \
+        in_canvas_downframe_fatora, count_label, fatora, rightframe_fatora, phars_Size, canvas_downframe_fatora
 
+    fatora_total = 0
     sz_fat = 0
     df_fat = pd.DataFrame(columns=['Name', 'Quantity', 'PhPrice', 'CPrice'])
 
@@ -594,7 +595,7 @@ def start_buttpon_clicked():
 
 
 def addinfatora_pressed(foundname, foundcpr):
-    global sz_fat
+    global sz_fat, fatora_total
     quan = quantity_entry.get()
     phprprice = '0' + phpr_entry.get()
     if '.' in phprprice:
@@ -612,25 +613,70 @@ def addinfatora_pressed(foundname, foundcpr):
     phprprice = float(phprprice)
 
     df_fat.loc[sz_fat] = [foundname, quan, phprprice, foundcpr]
+
+    add = phprprice*quan
+    name2_label = tkr.Label(in_canvas_rightframe_fatora, text=foundname,
+                            font=('Arial', '15'), width=28)
+    phpr2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % phprprice), font=('Arial', '15'))
+    quantity2_label = tkr.Label(in_canvas_rightframe_fatora, text=quan, font=('Arial', '15'))
+    phprtotal2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % add), font=('Arial', '15'))
+    removefatora_button = tkr.Button(in_canvas_rightframe_fatora, text='حذف',
+                                     font=('Arial', '15'), command=lambda m=sz_fat: removefatora_pressed(m))
+
+    fatora_total += add
+
+    phprtotal2_label.grid(row=2+sz_fat, column=0)
+    phpr2_label.grid(row=2+sz_fat, column=1)
+    quantity2_label.grid(row=2+sz_fat, column=2)
+    name2_label.grid(row=2+sz_fat, column=3)
+    removefatora_button.grid(row=2+sz_fat, column=4)
+
     sz_fat += 1
-    # comment: can be optimized
-    show_df_fat()
+    total_label['text'] = ("%.2f" % fatora_total)
+    count_label['text'] = sz_fat
 
 
 def removefatora_pressed(idx):
-    global sz_fat
+    global sz_fat, fatora_total
     answer = tkrmsg.askquestion("تأكيد", "حذف " + df_fat['Name'][idx] + '\n هل انت متأكد ؟')
     if answer == 'no':
         return
 
+    add = df_fat['PhPrice'][idx]*df_fat['Quantity'][idx]
+    fatora_total -= add
+
     for i in range(idx+1, sz_fat):
         df_fat.loc[i-1] = df_fat.loc[i]
+        add = df_fat['PhPrice'][i] * df_fat['Quantity'][i]
+
+        name2_label = tkr.Label(in_canvas_rightframe_fatora, text=df_fat['Name'][i],
+                                font=('Arial', '15'), width=28)
+        phpr2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % df_fat['PhPrice'][i]), font=('Arial', '15'))
+        quantity2_label = tkr.Label(in_canvas_rightframe_fatora, text=df_fat['Quantity'][i], font=('Arial', '15'))
+        phprtotal2_label = tkr.Label(in_canvas_rightframe_fatora, text=("%.2f" % add), font=('Arial', '15'))
+        removefatora_button = tkr.Button(in_canvas_rightframe_fatora, text='حذف',
+                                         font=('Arial', '15'), command=lambda m=i-1: removefatora_pressed(m))
+
+        phprtotal2_label.grid(row=2+i-1, column=0)
+        phpr2_label.grid(row=2+i-1, column=1)
+        quantity2_label.grid(row=2+i-1, column=2)
+        name2_label.grid(row=2+i-1, column=3)
+        removefatora_button.grid(row=2+i-1, column=4)
+
     sz_fat -= 1
     df_fat.drop(df_fat.index[sz_fat], inplace=True)
-    show_df_fat()
+
+    for thing in in_canvas_rightframe_fatora.grid_slaves(row=2+sz_fat):
+        #  if int(thing.grid_info()["row"]) == 2+sz_fat:
+        thing.grid_forget()
+
+    total_label['text'] = ("%.2f" % fatora_total)
+    count_label['text'] = sz_fat
 
 
+"""
 def show_df_fat():
+    global fatora_total
     total = 0
 
     for thing in in_canvas_rightframe_fatora.grid_slaves():
@@ -656,8 +702,10 @@ def show_df_fat():
         name2_label.grid(row=2+i, column=3)
         removefatora_button.grid(row=2+i, column=4)
 
-    total_label['text'] = ("%.2f" % total)
+    fatora_total = total
+    total_label['text'] = ("%.2f" % fatora_total)
     count_label['text'] = len(df_fat)
+"""
 
 
 def save_pressed():
@@ -686,6 +734,7 @@ def save_pressed():
         template = openpyxl.load_workbook('Database/template.xlsx')
         sheet = template['Sheet1']
         sheet['A3'] = date.today()
+        sheet['E3'] = 'بيان تسليم رقم ' + str(fatora_counter) + ' صفحة ' + str(page)
         sheet['E5'] = 'البضاعة مسلمة إلي : ' + phname_entry_get
 
         for i in range((page - 1)*25, min(page * 25, sz_fat)):
