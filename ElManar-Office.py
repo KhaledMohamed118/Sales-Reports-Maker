@@ -10,12 +10,26 @@ from datetime import date
 
 
 def start():
-    global data, Database_Size, Database_Name, phars, phars_Size, phars_Db_Name
+    global data, Database_Size, Database_Name, phars, phars_Size, phars_Db_Name, LETTERS, colchar, fatora_counter
+    LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     phars_Db_Name = "Database/phar.xlsx"
     Database_Name = "Database/Book.xlsx"
 
+    colfile = open("Database/column.txt", "r")
+    colchar = int(colfile.read())
+    colfile.close()
+
+    counterfile = open("Database/counter.txt", "r")
+    fatora_counter = int(counterfile.read())
+    counterfile.close()
+
+    if colchar < 26:
+        tempcols = "B:" + LETTERS[colchar]
+    else:
+        tempcols = "B:" + LETTERS[(colchar//26)-1] + LETTERS[colchar % 26]
+
     phars = pd.read_excel(phars_Db_Name, usecols="B")
-    data = pd.read_excel(Database_Name, usecols="B:D")
+    data = pd.read_excel(Database_Name, usecols=tempcols)
 
     phars_Size = len(phars)
     Database_Size = len(data)
@@ -84,6 +98,14 @@ def save_database():
     writer = pd.ExcelWriter(phars_Db_Name, engine='xlsxwriter')
     phars.to_excel(writer, sheet_name='Sheet1')
     writer.save()
+
+    colfile = open("Database/column.txt", "w")
+    colfile.write(str(colchar))
+    colfile.close()
+
+    counterfile = open("Database/counter.txt", "w")
+    counterfile.write(str(fatora_counter))
+    counterfile.close()
 
 
 def on_closing2():
@@ -232,7 +254,11 @@ def add_button_pressed(whocalled):
 
 def add_product(name, cpr, bupr):
     global Database_Size
-    data.loc[Database_Size] = [name, cpr, bupr]
+    listofzeros = [0] * colchar
+    listofzeros[0] = name
+    listofzeros[1] = cpr
+    listofzeros[2] = bupr
+    data.loc[Database_Size] = listofzeros
     Database_Size += 1
 
 
@@ -321,9 +347,11 @@ def update_edit(name, cpr, bupr, whocalled):
 
             if whocalled:
                 name_label = tkr.Button(fr, text=t['Name'], font=('Arial', '15'), width=35, padx=10,
-                                        command=lambda m=t["Name"], mm=t["CPrice"]: addinfatora_pressed(m, mm))
+                                        command=lambda m=t["Name"], mm=t["CPrice"], mmm=i: addinfatora_pressed(m, mm, mmm))
                 edit_button = tkr.Button(fr, text='تعديل', font=('Arial', '15'),
                                          command=lambda m=i, mm=1: edit_product(m, mm), width=3, padx=10)
+                phpr_label = tkr.Label(fr, text=("    %.2f" % t[phname_entry_get]), font=('Arial', '15'), width=10)
+                phpr_label.grid(row=i, column=6)
             else:
                 name_label = tkr.Label(fr, text=t['Name'], font=('Arial', '15'), width=35)
                 remove_button = tkr.Button(fr, text='حذف', font=('Arial', '20'),
@@ -331,6 +359,7 @@ def update_edit(name, cpr, bupr, whocalled):
                 edit_button = tkr.Button(fr, text='تعديل', font=('Arial', '20'),
                                          command=lambda m=i, mm=0: edit_product(m, mm), width=3)
                 remove_button.grid(row=i, column=4)
+
             bupr_label.grid(row=i, column=0)
             name_label.grid(row=i, column=1)
             cpr_label.grid(row=i, column=2)
@@ -423,7 +452,9 @@ def edit_buttpon_clicked(idx, whocalled):
     tt1 = converttofloat(cpr_entry_edit2.get())
     tt2 = converttofloat(bupr_entry_edit2.get())
 
-    data.loc[idx] = [name_entry_edit2.get(), float(tt1), float(tt2)]
+    data.at[idx, "Name"] = name_entry_edit2.get()
+    data.at[idx, "CPrice"] = float(tt1)
+    data.at[idx, "BuPrice"] = float(tt2)
 
     save_database()
     tkrmsg.showinfo('تم', 'تم التعديل')
@@ -466,7 +497,7 @@ def report(event):
 def start_buttpon_clicked():
     global downframe_fatora, quantity_entry, phpr_entry, in_canvas_rightframe_fatora, total_label, phname_entry_get,\
         df_fat, sz_fat, canvas_rightframe_fatora, bupr_entry_add, name_entry_add, cpr_entry_add, fatora_total, \
-        in_canvas_downframe_fatora, count_label, fatora, rightframe_fatora, phars_Size, canvas_downframe_fatora
+        in_canvas_downframe_fatora, count_label, fatora, rightframe_fatora, phars_Size, canvas_downframe_fatora, colchar
 
     fatora_total = 0
     sz_fat = 0
@@ -484,12 +515,20 @@ def start_buttpon_clicked():
         save_database()
         phars_Size += 1
 
+    if phname_entry_get not in data.columns:
+        listofzeros = [0] * Database_Size
+        data[phname_entry_get] = listofzeros
+        colchar += 1
+        save_database()
+
     phname_entry_get = phname_entry_get.replace('/', '.')
     phname_entry_get = phname_entry_get.replace('\\', '.')
 
     date_ph.destroy()
     fatora = tkr.Tk()
     rightframe_fatora = tkr.Tk()
+    fatora.title(phname_entry_get)
+    rightframe_fatora.title(phname_entry_get)
 
     ws = rightframe_fatora.winfo_screenwidth()
     hs = rightframe_fatora.winfo_screenheight()
@@ -539,15 +578,15 @@ def start_buttpon_clicked():
     quantity_label = tkr.Label(topframe_fatora, text='  الكمية  ', font=('Arial', '15'))
     phpr_label = tkr.Label(topframe_fatora, text='  سعر الصيدلي  ', font=('Arial', '15'))
 
-    cpr_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
-    name_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=24)
-    bupr_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
-    cpr_entry_fatora = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5, textvariable=cur_cpr)
-    name_entry_fatora = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=24, textvariable=cur_name)
     bupr_entry_fatora = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5, textvariable=cur_bupr)
+    name_entry_fatora = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=24, textvariable=cur_name)
+    cpr_entry_fatora = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5, textvariable=cur_cpr)
     quantity_entry = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
     phpr_entry = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
 
+    bupr_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
+    name_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=24)
+    cpr_entry_add = tkr.Entry(topframe_fatora, font=('Arial', '20'), width=5)
     add_button_inside_fatora = tkr.Button(topframe_fatora, text='إضافة صنف جديد',
                                           font=('Arial', '15'), command=lambda m=1: add_button_pressed(m))
 
@@ -594,7 +633,7 @@ def start_buttpon_clicked():
     fatora.mainloop()
 
 
-def addinfatora_pressed(foundname, foundcpr):
+def addinfatora_pressed(foundname, foundcpr, idxx):
     global sz_fat, fatora_total
     quan = quantity_entry.get()
     phprprice = '0' + phpr_entry.get()
@@ -611,6 +650,8 @@ def addinfatora_pressed(foundname, foundcpr):
 
     quan = int(quan)
     phprprice = float(phprprice)
+
+    data.at[idxx, phname_entry_get] = phprprice
 
     df_fat.loc[sz_fat] = [foundname, quan, phprprice, foundcpr]
 
@@ -709,7 +750,7 @@ def show_df_fat():
 
 
 def save_pressed():
-    global dire
+    global dire, fatora_counter
     if not sz_fat:
         tkrmsg.showerror('خطأ', 'لم يتم إدخال اى صنف\nلا يمكن طباعة الفاتورة فارغة')
         return
@@ -718,12 +759,8 @@ def save_pressed():
     if ans == 'no':
         return
 
-    counterfile = open("Database/counter.txt", "r")
-    fatora_counter = 1 + int(counterfile.read())
-    counterfile.close()
-    counterfile = open("Database/counter.txt", "w")
-    counterfile.write(str(fatora_counter))
-    counterfile.close()
+    fatora_counter += 1
+    save_database()
 
     dire = 'Reports\\' + phname_entry_get + '\\' + str(date.today()) + '\\' + str(fatora_counter) + '\\'
     if not os.path.exists(dire):
@@ -746,8 +783,12 @@ def save_pressed():
 
             # sheet['A' + str(9 + (i % 25))] = ("%.2f" % add)
             sheet['B' + str(9 + (i % 25))] = ("%.2f" % fatpr)
-            sheet['C' + str(9 + (i % 25))] = qua//12
-            sheet['D' + str(9 + (i % 25))] = qua % 12
+            if qua % 12 != 0:
+                sheet['C' + str(9 + (i % 25))] = 0
+                sheet['D' + str(9 + (i % 25))] = qua
+            else:
+                sheet['C' + str(9 + (i % 25))] = qua//12
+                sheet['D' + str(9 + (i % 25))] = 0
             sheet['E' + str(9 + (i % 25))] = name
             sheet['F' + str(9 + (i % 25))] = ("%.2f" % cupr)
             sheet['G' + str(9 + (i % 25))] = (i % 25)+1
