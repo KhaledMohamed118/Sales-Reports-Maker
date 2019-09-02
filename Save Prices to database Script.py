@@ -31,7 +31,7 @@ Database_Size = len(data)
 for filename in os.listdir("Reports"):
     print(filename)
     if filename not in data.columns:
-        listofzeros = [0] * Database_Size
+        listofzeros = [0.0] * Database_Size
         data[filename] = listofzeros
         colchar += 1
 
@@ -46,9 +46,8 @@ for filename in os.listdir("Reports"):
                 for j in range(len(cur_fatora)):
                     for i in range(Database_Size):
                         if data["Name"][i] == cur_fatora["Name"][j]:
-                            data.at[i, filename] = cur_fatora["PhPrice"][j]
+                            data.at[i, filename] = float(cur_fatora["PhPrice"][j])
                             break
     print("========")
 
-print(data)
 save_database()

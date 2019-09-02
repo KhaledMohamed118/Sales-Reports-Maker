@@ -254,10 +254,10 @@ def add_button_pressed(whocalled):
 
 def add_product(name, cpr, bupr):
     global Database_Size
-    listofzeros = [0] * colchar
+    listofzeros = [0.0] * colchar
     listofzeros[0] = name
-    listofzeros[1] = cpr
-    listofzeros[2] = bupr
+    listofzeros[1] = float(cpr)
+    listofzeros[2] = float(bupr)
     data.loc[Database_Size] = listofzeros
     Database_Size += 1
 
@@ -516,7 +516,7 @@ def start_buttpon_clicked():
         phars_Size += 1
 
     if phname_entry_get not in data.columns:
-        listofzeros = [0] * Database_Size
+        listofzeros = [0.0] * Database_Size
         data[phname_entry_get] = listofzeros
         colchar += 1
         save_database()
